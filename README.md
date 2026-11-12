@@ -138,4 +138,8 @@ pwsh -File tests\run-tests.ps1      # 12 项自检：JSON 映射 / 时间解析 
 - 首次运行若被安全软件拦截，添加信任即可。
 - 托盘图标：程序用 WinForms `NotifyIcon` + BMP 帧 ICO 注册。若把程序放在带“低完整性”标记的目录（沙箱、部分安全软件处理过的文件夹）里运行，进程会以 Low IL 启动，`Shell_NotifyIcon` 返回 `ERROR_ACCESS_DENIED(5)`，Windows 会拒绝任何托盘图标；把整个文件夹复制到桌面、`D:\Apps` 等普通目录（进程为 Medium IL）即可正常显示。图标默认收在任务栏 `^` 溢出区。
 
+## 许可
+
+MIT License，见 [LICENSE](LICENSE)。
+
 数据仅供参考，以机场实际运行为准。
