@@ -3,6 +3,8 @@
 一个 Windows 桌面小工具：抓取 [郑州机场货运网](https://www.zzcargo.com/airline/1) 的“货机航班动态”，
 在本机累积保存，提供筛选、查找、排序、详情查看，并一键导出 Excel（前 9 列对齐 `example.xlsx`）。
 
+> 安卓版（Kotlin）：[ZHCC_Cargo_Flight_Tracker](https://github.com/liwei3699/ZHCC_Cargo_Flight_Tracker)
+
 ![界面](docs/screenshot.png)
 
 ## 直接使用（不想编译）
