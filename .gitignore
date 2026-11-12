@@ -1,0 +1,30 @@
+# ---- 构建产物 ----
+bin/
+obj/
+dist/
+out/
+/货机航班动态/
+
+# ---- 本机运行数据（数据库、日志、设置）----
+data/
+*.db
+*.db-wal
+*.db-shm
+logs/
+.localdata/
+.localtmp/
+.acl-recovery/
+
+# ---- 抓包与临时文件（HAR 里可能含 Cookie/请求头，不要入库）----
+download.devtools
+*.har
+*.tmp
+
+# ---- 编辑器 / 系统 ----
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
