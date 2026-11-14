@@ -1,0 +1,165 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:ZhccCargoBoard.Desktop.Converters"
+        x:Class="ZhccCargoBoard.Desktop.Views.MainWindow"
+        Title="货机航班动态 · 郑州新郑国际机场"
+        Width="1280" Height="720"
+        MinWidth="1024" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
+        Background="White"
+        FontFamily="Noto Sans CJK SC, Source Han Sans SC, Microsoft YaHei, sans-serif"
+        FontSize="13"
+        Icon="/Assets/app.png">
+
+  <Window.Resources>
+    <conv:StatusToBrushConverter x:Key="StatusBrush" />
+  </Window.Resources>
+
+  <Window.Styles>
+    <Style Selector="TextBlock.label">
+      <Setter Property="Foreground" Value="#6B7785" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,6,0" />
+    </Style>
+    <Style Selector="TextBlock.caption">
+      <Setter Property="Foreground" Value="#6B7785" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ComboBox.filter">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinWidth" Value="90" />
+    </Style>
+    <Style Selector="TextBox.filter">
+      <Setter Property="Height" Value="30" />
+      <Setter Property="MinWidth" Value="90" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#0F7C8C" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Padding" Value="14,6" />
+      <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#0B6673" />
+    </Style>
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="#E2E7EA" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="4" />
+    </Style>
+    <Style Selector="DataGrid">
+      <Setter Property="RowHeight" Value="30" />
+      <Setter Property="FontSize" Value="13" />
+      <Setter Property="GridLinesVisibility" Value="Horizontal" />
+      <Setter Property="HorizontalGridLinesBrush" Value="#EFF3F5" />
+      <Setter Property="HeadersVisibility" Value="Column" />
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="IsReadOnly" Value="True" />
+    </Style>
+    <Style Selector="DataGridColumnHeader">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#5A6773" />
+    </Style>
+  </Window.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+    <!-- 顶部工具条 -->
+    <Border Grid.Row="0" Background="#F7F9FA" BorderBrush="#E2E7EA" BorderThickness="0,0,0,1" Padding="14,8">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <TextBlock Text="货机航班动态" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+          <TextBlock Text="郑州新郑国际机场" Classes="caption" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <TextBlock Text="{Binding LastRefreshText}" Classes="caption" />
+          <TextBlock Text="{Binding NextRefreshText}" Classes="caption" />
+          <Button Content="立即刷新" Classes="primary" Click="OnRefreshClick" IsEnabled="{Binding IsNotBusy}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- 筛选区（下拉为主，不需要中文输入） -->
+    <Border Grid.Row="1" Padding="14,8" BorderBrush="#E2E7EA" BorderThickness="0,0,0,1">
+      <WrapPanel Orientation="Horizontal">
+        <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
+          <TextBlock Text="航班号" Classes="label" />
+          <TextBox Classes="filter" Width="90" Text="{Binding FlightNo, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
+          <TextBlock Text="进出港" Classes="label" />
+          <ComboBox Classes="filter" Width="86" ItemsSource="{Binding DirectionOptions}" SelectedItem="{Binding Direction, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
+          <TextBlock Text="起飞机场" Classes="label" />
+          <ComboBox Classes="filter" Width="130" ItemsSource="{Binding OriginOptions}" SelectedItem="{Binding Origin, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
+          <TextBlock Text="降落机场" Classes="label" />
+          <ComboBox Classes="filter" Width="130" ItemsSource="{Binding DestOptions}" SelectedItem="{Binding Dest, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
+          <TextBlock Text="状态" Classes="label" />
+          <ComboBox Classes="filter" Width="96" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding Status, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
+          <TextBlock Text="日期" Classes="label" />
+          <ComboBox Classes="filter" Width="96" ItemsSource="{Binding DateOptions}" SelectedItem="{Binding DateFilter, Mode=TwoWay}" />
+        </StackPanel>
+        <Button Content="重置" Classes="ghost" VerticalAlignment="Center" Margin="0,0,0,6" Click="OnResetClick" />
+      </WrapPanel>
+    </Border>
+
+    <!-- 错误横幅 -->
+    <Border Grid.Row="2" Background="#FDECEA" Padding="14,6" IsVisible="{Binding HasError}">
+      <TextBlock Text="{Binding ErrorMessage}" Foreground="#B3261E" TextWrapping="Wrap" />
+    </Border>
+
+    <!-- 主表 -->
+    <DataGrid Grid.Row="3" x:Name="FlightGrid"
+              ItemsSource="{Binding View}"
+              SelectedItem="{Binding SelectedFlight, Mode=TwoWay}"
+              AutoGenerateColumns="False"
+              CanUserSortColumns="True"
+              CanUserResizeColumns="True"
+              IsReadOnly="True"
+              DoubleTapped="OnRowDoubleTapped">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="航班" Binding="{Binding FlightInfo}" Width="110" />
+        <DataGridTextColumn Header="起降机场" Binding="{Binding RouteText}" Width="*" MinWidth="220" />
+        <DataGridTextColumn Header="计划起飞" Binding="{Binding ScheDep}" Width="92" />
+        <DataGridTextColumn Header="实际起飞" Binding="{Binding ActlDep}" Width="92" />
+        <DataGridTextColumn Header="计划降落" Binding="{Binding ScheArr}" Width="92" />
+        <DataGridTextColumn Header="实际降落" Binding="{Binding ActlArr}" Width="92" />
+        <DataGridTextColumn Header="航班日期" Binding="{Binding ExecDate}" Width="108" />
+        <DataGridTemplateColumn Header="状态" Width="86">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                <Ellipse Width="7" Height="7" Fill="{Binding StatusText, Converter={StaticResource StatusBrush}}" />
+                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" />
+              </StackPanel>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="机型" Binding="{Binding CraftType}" Width="80" />
+        <DataGridTextColumn Header="机号" Binding="{Binding CraftNo}" Width="86" />
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <!-- 状态栏 -->
+    <Border Grid.Row="4" Background="#F7F9FA" BorderBrush="#E2E7EA" BorderThickness="0,1,0,0" Padding="14,4">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <TextBlock Text="{Binding CountText}" Classes="caption" />
+        <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" Classes="caption" Margin="18,0,0,0" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Column="2" Text="数据仅供参考，以机场实际运行为准" Classes="caption" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

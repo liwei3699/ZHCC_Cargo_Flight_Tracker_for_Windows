@@ -46,15 +46,20 @@ src/
     Export/ExportColumns.cs     # 9 基础列 + 10 附加列定义
     Export/XlsxExporter.cs      # ClosedXML 导出
     AppPaths.cs AppSettings.cs Log.cs
-  ZhccCargoBoard.App/           # WPF 界面
+  ZhccCargoBoard.App/           # WPF 界面（Windows）
     MainWindow.xaml(.cs) ViewModels/MainViewModel.cs
     Dialogs/ExportDialog.xaml(.cs) Dialogs/SettingsDialog.xaml(.cs)
     Services/TrayService.cs Converters/Converters.cs App.xaml(.cs)
+  ZhccCargoBoard.Desktop/       # Avalonia 界面（Linux / Orange Pi 5 只读查看器）
+    Views/MainWindow.axaml(.cs) Views/DetailWindow.axaml(.cs)
+    ViewModels/MainViewModel.cs Assets/app.png
 tools/
   ZhccCargoBoard.Cli/           # 命令行验证工具：fetch / export / all / print
+  linux/install-on-board.sh     # 板端安装脚本（复制目录 + 建桌面快捷方式）
   make_icon.py                  # 生成 app.ico
 tests/                          # 自动化测试（见下）
-build.ps1                       # 发布文件夹版到 dist\货机航班动态\ 并打 zip
+build.ps1                       # 发布 Windows 文件夹版到 dist\货机航班动态\ 并打 zip
+build-linux.ps1                 # 交叉编译 linux-arm64 包（dist-linux\*.tar.gz）
 使用说明.txt                     # 给最终用户看的说明
 ```
 
@@ -88,6 +93,27 @@ pwsh -File build.ps1 -SingleFile        # 另外再出一个单文件版（依�
 > 单文件版的坑：自包含单文件的 apphost 启动时要把 WPF 原生库解包到 `%TEMP%\.net\<程序名>\<hash>`，
 > 遇到 TEMP 不可写（受限账号、漫游配置、部分安全软件）就会**静默退出、毫无提示**。
 > 文件夹版不做解包，因此没有这个问题。
+
+## Linux / Orange Pi 5（板端查看器）
+
+同一套 `Core` 代码 + Avalonia 前端的只读查看器，已部署在 Orange Pi 5（RK3588S，Ubuntu 22.04，1280x720）：
+
+![板端界面](docs/screenshot-linux.png)
+
+- 抓取 642 条 / 59 页 / **3.2 秒**；RSS ≈ 261 MB；空闲 CPU ≈ 1.7%（8 核）
+- 渲染走 **EGL + Mali GLES**（`libEGL.so.1` + `libmali.so`，无 llvmpipe）
+- 无导出、无托盘、不常驻：打开即抓，关闭即退出（`src/ZhccCargoBoard.Desktop`）
+
+```powershell
+# Windows 侧交叉编译 arm64 包
+pwsh -File build-linux.ps1
+
+# 传到板子并安装（板子在 192.168.170.x，配好免密 SSH）
+scp dist-linux\zhcc-board-linux-arm64.tar.gz orangepi@<板子IP>:~/
+ssh orangepi@<板子IP> "mkdir -p ~/apps && tar -xzf ~/zhcc-board-linux-arm64.tar.gz -C ~/apps && bash ~/apps/zhcc-board/install-on-board.sh"
+```
+
+安装后桌面与开始菜单会出现「货机航班动态」。渲染路径若在某台板子上初始化失败，Avalonia 会自动回退软件渲染。
 
 ## 数据源与接口
 

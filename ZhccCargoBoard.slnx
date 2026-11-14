@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/ZhccCargoBoard.App/ZhccCargoBoard.App.csproj" />
     <Project Path="src/ZhccCargoBoard.Core/ZhccCargoBoard.Core.csproj" />
+    <Project Path="src/ZhccCargoBoard.Desktop/ZhccCargoBoard.Desktop.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ZhccCargoBoard.Tests/ZhccCargoBoard.Tests.csproj" />

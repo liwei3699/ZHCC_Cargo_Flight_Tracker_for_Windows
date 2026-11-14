@@ -210,3 +210,28 @@ ssh orangepi@192.168.170.42 "DISPLAY=:0 xrandr | head -3"
 ssh orangepi@192.168.170.42 "DISPLAY=:0 eglinfo -B | head -12"
 ssh orangepi@192.168.170.42 "curl -sS -o /dev/null -m 20 -w '%{http_code} %{time_total}\n' https://www.zzcargo.com/airline/1"
 ```
+
+---
+
+## 十三、实施记录（2026-11-14 首版已上板）
+
+按本方案做了 P0 + P1 的首版，并已部署到板子：
+
+| 项 | 结果 |
+|---|---|
+| 新项目 | `src/ZhccCargoBoard.Desktop`（Avalonia 12.1.6 + DataGrid 12.1.2，net10.0） |
+| 复用 | `ZhccCargoBoard.Core` 零改动（抓取/SQLite 全复用） |
+| 渲染 | 板上实际加载 `libEGL.so.1` + `libmali.so.1.9.0`，`/proc/<pid>/maps` 里 **0 个 llvmpipe/swrast** → 走的是 Mali GLES 硬件渲染 |
+| 抓取 | 板端首次抓取 **642 条 / 59 页 / 3.2 秒**，数据落到 `~/.local/share/ZhccCargoBoard` |
+| 资源 | RSS ≈ **261 MB**，空闲 CPU ≈ **1.7%**（8 核） |
+| 界面 | 1280x720 全屏，8 列 + 状态圆点，下拉筛选全部显示「全部」，双击行弹详情 |
+| 部署 | 包 43.6 MB，局域网 scp **17.7 MB/s**（约 2.5 秒）；装到 `~/apps/zhcc-board`，桌面/菜单快捷方式「货机航班动态」 |
+| 记账 | 已在板上 `~/log-change.sh` 追加 2 条，`BOARD-STATE.md` 升到 v1.2 并加入「板端看板」速览行 |
+
+截图：`docs/screenshot-linux.png`（板子 HDMI 实拍，1280x720）。
+
+后续待办（第二版）：
+1. 与 YOLO 同跑 30 分钟，观察内存/帧率是否互相拖累；
+2. 长时间滚动 642 行的流畅度（若卡，评估 `Software` 渲染或减少列）；
+3. 关闭按钮行为验证（应直接退出进程）；
+4. 视需要把「刷新间隔/保留天数」做成只读显示或极简设置。

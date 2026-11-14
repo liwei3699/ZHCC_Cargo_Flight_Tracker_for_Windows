@@ -96,6 +96,9 @@ public sealed class FlightRecord
     };
     public string RouteAndStations => AirrouteCn.Length > 0 ? AirrouteCn : RouteText;
 
+    /// <summary>航站楼（源数据可能是 ",T2" 这种带前导逗号的值）。</summary>
+    public string TerminalText => Terminal.Trim().TrimStart(',').Trim();
+
     public DateTime? ExecDateValue => DateTime.TryParseExact(
         ExecDate, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d : null;
 
