@@ -7,6 +7,7 @@ using ZhccCargoBoard.Core;
 using ZhccCargoBoard.Core.Models;
 using ZhccCargoBoard.Core.Services;
 using ZhccCargoBoard.Core.Storage;
+using ZhccCargoBoard.Desktop.Services;
 
 namespace ZhccCargoBoard.Desktop.ViewModels;
 
@@ -24,8 +25,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _origin = All;
     private string _dest = All;
     private string _status = All;
+    private string _typeFamily = All;
     private string _craftType = All;
     private string _airline = All;
+    private readonly Dictionary<string, string> _typeLabelToRaw = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _airlineLabelToCode = new(StringComparer.Ordinal);
     private string _dateFilter = "全部日期";
 
     private bool _isBusy;
@@ -67,6 +71,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<string> OriginOptions { get; } = new() { All };
     public ObservableCollection<string> DestOptions { get; } = new() { All };
     public ObservableCollection<string> StatusOptions { get; } = new() { All };
+    public ObservableCollection<string> TypeFamilyOptions { get; } = new() { All };
     public ObservableCollection<string> CraftTypeOptions { get; } = new() { All };
     public ObservableCollection<string> AirlineOptions { get; } = new() { All };
     public ObservableCollection<string> DateOptions { get; } = new() { "全部日期", "今天", "明天", "后天" };
@@ -100,6 +105,23 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _status;
         set => SetFilter(ref _status, value);
+    }
+
+    /// <summary>机型大类（波音737 / 空客A320 …）。切换后会重建小类列表。</summary>
+    public string TypeFamily
+    {
+        get => _typeFamily;
+        set
+        {
+            var normalized = value ?? All;
+            if (string.Equals(_typeFamily, normalized, StringComparison.Ordinal)) return;
+            _typeFamily = normalized;
+            OnPropertyChanged();
+            RebuildCraftTypeOptions(resetSubtype: true);
+            View.Refresh();
+            OnPropertyChanged(nameof(VisibleCount));
+            OnPropertyChanged(nameof(CountText));
+        }
     }
 
     public string CraftType
@@ -237,57 +259,121 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var origin = Origin;
         var dest = Dest;
         var status = Status;
-        var craftType = CraftType;
+        var family = TypeFamily;
         var airline = Airline;
 
         Fill(OriginOptions, _all.Select(r => r.OriginCn));
         Fill(DestOptions, _all.Select(r => r.DestCn));
         Fill(StatusOptions, _all.Select(r => r.StatusText));
-        Fill(CraftTypeOptions, _all.Select(r => r.CraftType));
-        Fill(AirlineOptions, _all.Select(r => r.AirlineCode));
+
+        // 机型大类：按固定顺序（波音7x7 → 空客A3xx → 国产/其它）
+        var families = _all.Select(r => AircraftTypes.FamilyOf(r.CraftType))
+                           .Where(f => !string.IsNullOrWhiteSpace(f))
+                           .Distinct()
+                           .OrderBy(AircraftTypes.FamilyRank)
+                           .ThenBy(f => f, StringComparer.Ordinal);
+        SyncList(TypeFamilyOptions, WithAll(families));
+        Restore(ref _typeFamily, TypeFamilyOptions, family, nameof(TypeFamily));
+
+        RebuildCraftTypeOptions(resetSubtype: false);
+        BuildAirlineOptions(airline);
 
         // 列表被 Clear 时 ComboBox 的选中项会被清空，这里无条件重写回 VM 并通知，
         // 否则会出现"下拉框空白但筛选值其实是全部"的假象。
         Restore(ref _origin, OriginOptions, origin, nameof(Origin));
         Restore(ref _dest, DestOptions, dest, nameof(Dest));
         Restore(ref _status, StatusOptions, status, nameof(Status));
-        Restore(ref _craftType, CraftTypeOptions, craftType, nameof(CraftType));
-        Restore(ref _airline, AirlineOptions, airline, nameof(Airline));
 
         static void Fill(ObservableCollection<string> target, IEnumerable<string> values)
         {
-            var desired = new List<string> { All };
-            desired.AddRange(values.Where(x => !string.IsNullOrWhiteSpace(x))
-                                   .Distinct()
-                                   .OrderBy(x => x, StringComparer.Ordinal));
-
-            // 增量同步，而不是 Clear()：Clear 会让 ComboBox 丢掉 SelectedItem，
-            // 之后即使把集合补回来，绑定也不一定会重新选中。
-            for (var i = target.Count - 1; i >= 0; i--)
-            {
-                if (!desired.Contains(target[i])) target.RemoveAt(i);
-            }
-
-            for (var i = 0; i < desired.Count; i++)
-            {
-                if (i < target.Count && string.Equals(target[i], desired[i], StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                var existing = target.IndexOf(desired[i]);
-                if (existing >= 0) target.Move(existing, i);
-                else target.Insert(i, desired[i]);
-            }
+            SyncList(target, WithAll(values.Where(x => !string.IsNullOrWhiteSpace(x))
+                                           .Distinct()
+                                           .OrderBy(x => x, StringComparer.Ordinal)));
         }
 
-        void Restore(ref string field, ObservableCollection<string> options, string? current, string name)
+    }
+
+    private void Restore(ref string field, ObservableCollection<string> options, string? current, string name)
+    {
+        field = current is not null && options.Contains(current) ? current : All;
+        OnPropertyChanged(name);
+    }
+
+    /// <summary>按当前「机型大类」重建小类列表；resetSubtype=true 时把小类重置为「全部」。</summary>
+    private void RebuildCraftTypeOptions(bool resetSubtype)
+    {
+        var previous = resetSubtype ? All : CraftType;
+
+        _typeLabelToRaw.Clear();
+        var raws = _all.Select(r => r.CraftType)
+                       .Where(t => !string.IsNullOrWhiteSpace(t))
+                       .Distinct(StringComparer.OrdinalIgnoreCase)
+                       .Where(t => IsAll(TypeFamily) || string.Equals(AircraftTypes.FamilyOf(t), TypeFamily, StringComparison.Ordinal))
+                       .OrderBy(AircraftTypes.LabelOf, StringComparer.Ordinal)
+                       .ToList();
+
+        var desired = new List<string> { All };
+        foreach (var raw in raws)
         {
-            field = current is not null && options.Contains(current) ? current : All;
-            OnPropertyChanged(name);
+            var label = AircraftTypes.LabelOf(raw);
+            if (_typeLabelToRaw.ContainsKey(label)) continue;
+            _typeLabelToRaw[label] = raw;
+            desired.Add(label);
+        }
+
+        SyncList(CraftTypeOptions, desired);
+        Restore(ref _craftType, CraftTypeOptions, previous, nameof(CraftType));
+    }
+
+    /// <summary>航司下拉显示成「CZ 中国南方航空」，匹配时再映射回代码。</summary>
+    private void BuildAirlineOptions(string? current)
+    {
+        _airlineLabelToCode.Clear();
+        var desired = new List<string> { All };
+
+        foreach (var code in _all.Select(r => r.AirlineCode)
+                                 .Where(c => !string.IsNullOrWhiteSpace(c))
+                                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                                 .OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
+        {
+            var name = AirlineNames.Of(code);
+            var label = string.IsNullOrEmpty(name) ? code : $"{code} {name}";
+            if (_airlineLabelToCode.ContainsKey(label)) continue;
+            _airlineLabelToCode[label] = code;
+            desired.Add(label);
+        }
+
+        SyncList(AirlineOptions, desired);
+        Restore(ref _airline, AirlineOptions, current, nameof(Airline));
+    }
+
+    /// <summary>增量同步集合：不做 Clear()，避免 ComboBox 丢失当前选中项。</summary>
+    private static void SyncList(ObservableCollection<string> target, IReadOnlyList<string> desired)
+    {
+        for (var i = target.Count - 1; i >= 0; i--)
+        {
+            if (!desired.Contains(target[i])) target.RemoveAt(i);
+        }
+
+        for (var i = 0; i < desired.Count; i++)
+        {
+            if (i < target.Count && string.Equals(target[i], desired[i], StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var existing = target.IndexOf(desired[i]);
+            if (existing >= 0) target.Move(existing, i);
+            else target.Insert(i, desired[i]);
         }
     }
 
+    private static IReadOnlyList<string> WithAll(IEnumerable<string> values)
+    {
+        var list = new List<string> { All };
+        list.AddRange(values);
+        return list;
+    }
     private void SetFilter(ref string field, string? value, [CallerMemberName] string? propertyName = null)
     {
         var normalized = value ?? All;
@@ -311,8 +397,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (!IsAll(Origin) && !string.Equals(r.OriginCn, Origin, StringComparison.Ordinal)) return false;
         if (!IsAll(Dest) && !string.Equals(r.DestCn, Dest, StringComparison.Ordinal)) return false;
         if (!IsAll(Status) && !string.Equals(r.StatusText, Status, StringComparison.Ordinal)) return false;
-        if (!IsAll(CraftType) && !string.Equals(r.CraftType, CraftType, StringComparison.OrdinalIgnoreCase)) return false;
-        if (!IsAll(Airline) && !string.Equals(r.AirlineCode, Airline, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!IsAll(TypeFamily) && !string.Equals(AircraftTypes.FamilyOf(r.CraftType), TypeFamily, StringComparison.Ordinal)) return false;
+        if (!IsAll(CraftType))
+        {
+            var raw = _typeLabelToRaw.TryGetValue(CraftType, out var mapped) ? mapped : CraftType;
+            if (!string.Equals(r.CraftType, raw, StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        if (!IsAll(Airline))
+        {
+            var code = _airlineLabelToCode.TryGetValue(Airline, out var mapped) ? mapped : Airline;
+            if (!string.Equals(r.AirlineCode, code, StringComparison.OrdinalIgnoreCase)) return false;
+        }
 
         if (DateFilter is "今天" or "明天" or "后天")
         {
@@ -331,14 +426,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _origin = All;
         _dest = All;
         _status = All;
+        _typeFamily = All;
         _craftType = All;
         _airline = All;
         _dateFilter = "全部日期";
+        RebuildCraftTypeOptions(resetSubtype: true);
         OnPropertyChanged(nameof(FlightNo));
         OnPropertyChanged(nameof(Direction));
         OnPropertyChanged(nameof(Origin));
         OnPropertyChanged(nameof(Dest));
         OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(TypeFamily));
         OnPropertyChanged(nameof(CraftType));
         OnPropertyChanged(nameof(Airline));
         OnPropertyChanged(nameof(DateFilter));
