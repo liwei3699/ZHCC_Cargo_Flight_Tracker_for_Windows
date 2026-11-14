@@ -12,7 +12,7 @@
     <AssemblyTitle>郑州机场货运航班动态</AssemblyTitle>
     <Product>郑州机场货运航班动态</Product>
     <Description>郑州新郑国际机场货运航班动态查看与导出工具</Description>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <!-- WFO0003 是 WinForms 分析器对 WPF manifest 里 dpiAware 的误报，这里只需要 PerMonitorV2 -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>

@@ -33,8 +33,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _status = AllOption;
     private string _timeFrom = "";
     private string _timeTo = "";
+    private string _typeFamily = AllOption;
     private string _craftType = AllOption;
     private string _airline = AllOption;
+    private readonly Dictionary<string, string> _typeLabelToRaw = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _airlineLabelToCode = new(StringComparer.Ordinal);
     private string _craftNo = "";
 
     private string _sortKey = "exec_date";
@@ -74,6 +77,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public ObservableCollection<string> AgentOptions { get; } = new() { AllOption };
     public ObservableCollection<string> StatusOptions { get; } = new() { AllOption };
+    public ObservableCollection<string> TypeFamilyOptions { get; } = new() { AllOption };
     public ObservableCollection<string> CraftTypeOptions { get; } = new() { AllOption };
     public ObservableCollection<string> AirlineOptions { get; } = new() { AllOption };
     public ObservableCollection<string> DirectionOptions { get; } = new() { AllOption, "进港", "出港" };
@@ -157,12 +161,26 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         set => SetFilter(ref _timeTo, value);
     }
 
+    /// <summary>机型大类（波音737 / 空客A320 …），切换后重建小类列表。</summary>
+    public string TypeFamily
+    {
+        get => _typeFamily;
+        set
+        {
+            var normalized = value ?? AllOption;
+            if (string.Equals(_typeFamily, normalized, StringComparison.Ordinal)) return;
+            _typeFamily = normalized;
+            OnPropertyChanged();
+            RebuildCraftTypeOptions(resetSubtype: true);
+            ApplyFilters();
+        }
+    }
+
     public string CraftType
     {
         get => _craftType;
         set => SetFilter(ref _craftType, value);
     }
-
     public string Airline
     {
         get => _airline;
@@ -336,28 +354,115 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void RebuildOptions()
     {
-        void Fill(ObservableCollection<string> target, IEnumerable<string> values)
-        {
-            var current = target.Count > 0 ? target[0] : AllOption;
-            target.Clear();
-            target.Add(AllOption);
-            foreach (var value in values.Where(v => !string.IsNullOrWhiteSpace(v)).Distinct().OrderBy(v => v, StringComparer.Ordinal))
-            {
-                target.Add(value);
-            }
-        }
+        var agent = Agent;
+        var status = Status;
+        var family = TypeFamily;
+        var airline = Airline;
 
-        Fill(AgentOptions, _all.Select(r => r.Agency));
-        Fill(StatusOptions, _all.Select(r => r.StatusText));
-        Fill(CraftTypeOptions, _all.Select(r => r.CraftType));
-        Fill(AirlineOptions, _all.Select(r => r.AirlineCode));
+        SyncList(AgentOptions, WithAllSorted(_all.Select(r => r.Agency)));
+        SyncList(StatusOptions, WithAllSorted(_all.Select(r => r.StatusText)));
 
-        if (!AgentOptions.Contains(Agent)) Agent = AllOption;
-        if (!StatusOptions.Contains(Status)) Status = AllOption;
-        if (!CraftTypeOptions.Contains(CraftType)) CraftType = AllOption;
-        if (!AirlineOptions.Contains(Airline)) Airline = AllOption;
+        var families = _all.Select(r => AircraftTypes.FamilyOf(r.CraftType))
+                           .Where(f => !string.IsNullOrWhiteSpace(f))
+                           .Distinct()
+                           .OrderBy(AircraftTypes.FamilyRank)
+                           .ThenBy(f => f, StringComparer.Ordinal);
+        SyncList(TypeFamilyOptions, WithAll(families));
+        Restore(ref _typeFamily, TypeFamilyOptions, family, nameof(TypeFamily));
+
+        RebuildCraftTypeOptions(resetSubtype: false);
+        BuildAirlineOptions(airline);
+
+        Restore(ref _agent, AgentOptions, agent, nameof(Agent));
+        Restore(ref _status, StatusOptions, status, nameof(Status));
     }
 
+    /// <summary>按当前机型大类重建小类列表；resetSubtype 时小类重置为「全部」。</summary>
+    private void RebuildCraftTypeOptions(bool resetSubtype)
+    {
+        var previous = resetSubtype ? AllOption : CraftType;
+
+        _typeLabelToRaw.Clear();
+        var raws = _all.Select(r => r.CraftType)
+                       .Where(t => !string.IsNullOrWhiteSpace(t))
+                       .Distinct(StringComparer.OrdinalIgnoreCase)
+                       .Where(t => IsAll(TypeFamily) ||
+                                   string.Equals(AircraftTypes.FamilyOf(t), TypeFamily, StringComparison.Ordinal))
+                       .OrderBy(AircraftTypes.LabelOf, StringComparer.Ordinal)
+                       .ToList();
+
+        var desired = new List<string> { AllOption };
+        foreach (var raw in raws)
+        {
+            var label = AircraftTypes.LabelOf(raw);
+            if (_typeLabelToRaw.ContainsKey(label)) continue;
+            _typeLabelToRaw[label] = raw;
+            desired.Add(label);
+        }
+
+        SyncList(CraftTypeOptions, desired);
+        Restore(ref _craftType, CraftTypeOptions, previous, nameof(CraftType));
+    }
+
+    /// <summary>航司下拉显示「CZ 中国南方航空」，筛选时映射回代码。</summary>
+    private void BuildAirlineOptions(string? current)
+    {
+        _airlineLabelToCode.Clear();
+        var desired = new List<string> { AllOption };
+
+        foreach (var code in _all.Select(r => r.AirlineCode)
+                                 .Where(c => !string.IsNullOrWhiteSpace(c))
+                                 .Distinct(StringComparer.OrdinalIgnoreCase)
+                                 .OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
+        {
+            var name = AirlineNames.Of(code);
+            var label = string.IsNullOrEmpty(name) ? code : $"{code} {name}";
+            if (_airlineLabelToCode.ContainsKey(label)) continue;
+            _airlineLabelToCode[label] = code;
+            desired.Add(label);
+        }
+
+        SyncList(AirlineOptions, desired);
+        Restore(ref _airline, AirlineOptions, current, nameof(Airline));
+    }
+
+    private void Restore(ref string field, ObservableCollection<string> options, string? current, string name)
+    {
+        field = current is not null && options.Contains(current) ? current : AllOption;
+        OnPropertyChanged(name);
+    }
+
+    /// <summary>保持传入顺序（机型大类用固定排序，不能在这里再按字母排一遍）。</summary>
+    private static IReadOnlyList<string> WithAll(IEnumerable<string> values)
+    {
+        var list = new List<string> { AllOption };
+        list.AddRange(values);
+        return list;
+    }
+
+    private static IReadOnlyList<string> WithAllSorted(IEnumerable<string> values)
+    {
+        return WithAll(values.Where(v => !string.IsNullOrWhiteSpace(v))
+                             .Distinct()
+                             .OrderBy(v => v, StringComparer.Ordinal));
+    }
+
+    /// <summary>增量同步集合，避免 Clear() 让 ComboBox 丢失选中项。</summary>
+    private static void SyncList(ObservableCollection<string> target, IReadOnlyList<string> desired)
+    {
+        for (var i = target.Count - 1; i >= 0; i--)
+        {
+            if (!desired.Contains(target[i])) target.RemoveAt(i);
+        }
+
+        for (var i = 0; i < desired.Count; i++)
+        {
+            if (i < target.Count && string.Equals(target[i], desired[i], StringComparison.Ordinal)) continue;
+            var existing = target.IndexOf(desired[i]);
+            if (existing >= 0) target.Move(existing, i);
+            else target.Insert(i, desired[i]);
+        }
+    }
     private void SetFilter(ref string field, string? value, [CallerMemberName] string? propertyName = null)
     {
         var normalized = value ?? "";
@@ -374,7 +479,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             Keyword = ""; FlightNo = ""; Agent = AllOption; Direction = AllOption;
             Origin = ""; Dest = ""; DateFrom = null; DateTo = null; Status = AllOption;
-            TimeFrom = ""; TimeTo = ""; CraftType = AllOption; Airline = AllOption; CraftNo = "";
+            TimeFrom = ""; TimeTo = ""; _typeFamily = AllOption; RebuildCraftTypeOptions(resetSubtype: true); CraftType = AllOption; Airline = AllOption; CraftNo = "";
         }
         finally
         {
@@ -435,9 +540,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         if (!IsAll(Status) && !string.Equals(r.StatusText, Status, StringComparison.Ordinal)) return false;
-        if (!IsAll(CraftType) && !string.Equals(r.CraftType, CraftType, StringComparison.OrdinalIgnoreCase)) return false;
-        if (!IsAll(Airline) && !string.Equals(r.AirlineCode, Airline, StringComparison.OrdinalIgnoreCase)) return false;
-        if (!string.IsNullOrWhiteSpace(CraftNo) && !Contains(r.CraftNo, CraftNo.Trim())) return false;
+        if (!IsAll(TypeFamily) &&
+            !string.Equals(AircraftTypes.FamilyOf(r.CraftType), TypeFamily, StringComparison.Ordinal)) return false;
+        if (!IsAll(CraftType))
+        {
+            var raw = _typeLabelToRaw.TryGetValue(CraftType, out var mapped) ? mapped : CraftType;
+            if (!string.Equals(r.CraftType, raw, StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        if (!IsAll(Airline))
+        {
+            var code = _airlineLabelToCode.TryGetValue(Airline, out var mapped) ? mapped : Airline;
+            if (!string.Equals(r.AirlineCode, code, StringComparison.OrdinalIgnoreCase)) return false;
+        }        if (!string.IsNullOrWhiteSpace(CraftNo) && !Contains(r.CraftNo, CraftNo.Trim())) return false;
 
         return MatchesTimeWindow(r);
     }

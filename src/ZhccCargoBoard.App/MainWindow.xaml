@@ -162,13 +162,22 @@
                     </Grid>
                 </StackPanel>
 
-                <StackPanel Style="{StaticResource FilterItem}" Width="104">
-                    <TextBlock Text="机型" Style="{StaticResource FilterLabel}" />
-                    <ComboBox Style="{StaticResource InputCombo}" ItemsSource="{Binding CraftTypeOptions}"
-                              SelectedItem="{Binding CraftType, Mode=TwoWay}" />
+                <StackPanel Style="{StaticResource FilterItem}" Width="200">
+                    <TextBlock Text="机型（大类 / 小类）" Style="{StaticResource FilterLabel}" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="96" />
+                            <ColumnDefinition Width="6" />
+                            <ColumnDefinition Width="96" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" Style="{StaticResource InputCombo}" ItemsSource="{Binding TypeFamilyOptions}"
+                                  SelectedItem="{Binding TypeFamily, Mode=TwoWay}" />
+                        <ComboBox Grid.Column="2" Style="{StaticResource InputCombo}" ItemsSource="{Binding CraftTypeOptions}"
+                                  SelectedItem="{Binding CraftType, Mode=TwoWay}" />
+                    </Grid>
                 </StackPanel>
 
-                <StackPanel Style="{StaticResource FilterItem}" Width="96">
+                <StackPanel Style="{StaticResource FilterItem}" Width="150">
                     <TextBlock Text="航司" Style="{StaticResource FilterLabel}" />
                     <ComboBox Style="{StaticResource InputCombo}" ItemsSource="{Binding AirlineOptions}"
                               SelectedItem="{Binding Airline, Mode=TwoWay}" />

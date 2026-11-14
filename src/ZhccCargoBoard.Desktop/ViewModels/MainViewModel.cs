@@ -7,7 +7,6 @@ using ZhccCargoBoard.Core;
 using ZhccCargoBoard.Core.Models;
 using ZhccCargoBoard.Core.Services;
 using ZhccCargoBoard.Core.Storage;
-using ZhccCargoBoard.Desktop.Services;
 
 namespace ZhccCargoBoard.Desktop.ViewModels;
 

@@ -7,7 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyTitle>货机航班动态</AssemblyTitle>
     <Product>货机航班动态（Linux 查看器）</Product>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 

@@ -1,4 +1,4 @@
-namespace ZhccCargoBoard.Desktop.Services;
+namespace ZhccCargoBoard.Core.Services;
 
 /// <summary>
 /// 航司二字码 → 中文名（只用于界面显示；数据里的 agency 是地面代理，不能当航司名）。

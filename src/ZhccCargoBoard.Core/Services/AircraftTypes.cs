@@ -1,4 +1,4 @@
-namespace ZhccCargoBoard.Desktop.Services;
+namespace ZhccCargoBoard.Core.Services;
 
 /// <summary>
 /// 机型代码 → 大类 / 短标签。
