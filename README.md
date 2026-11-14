@@ -9,7 +9,7 @@
 
 ## 直接使用（不想编译）
 
-1. 取 [Releases](https://github.com/liwei3699/ZHCC_Cargo_Flight_Tracker_for_Windows/releases/latest) 里的 `ZhccCargoBoard_win-x64_v1.0.1.zip`（或本地 `dist\货机航班动态_免安装版.zip`），解压到**普通文件夹**（桌面、`D:\Apps` 等，不要放在带低完整性标记的目录）；
+1. 取 [Releases](https://github.com/liwei3699/ZHCC_Cargo_Flight_Tracker_for_Windows/releases/latest) 里的 `ZhccCargoBoard_win-x64_v1.1.0.zip`（或本地 `dist\货机航班动态_免安装版.zip`），解压到**普通文件夹**（桌面、`D:\Apps` 等，不要放在带低完整性标记的目录）；
 2. 双击 `货机航班动态.exe`，首次启动自动抓取一次，之后每 30 分钟刷新；
 3. 关闭窗口即最小化到托盘 `^` 后台刷新，托盘菜单里退出。详细说明见 [使用说明.txt](使用说明.txt)。
 
@@ -115,6 +115,8 @@ ssh orangepi@<板子IP> "mkdir -p ~/apps && tar -xzf ~/zhcc-board-linux-arm64.ta
 ```
 
 安装后桌面与开始菜单会出现「货机航班动态」。渲染路径若在某台板子上初始化失败，Avalonia 会自动回退软件渲染。
+
+也可以直接下载打好的包：[zhcc-board-linux-arm64-v1.1.0.tar.gz](https://github.com/liwei3699/ZHCC_Cargo_Flight_Tracker_for_Windows/releases/download/v1.1.0/zhcc-board-linux-arm64-v1.1.0.tar.gz)。
 
 ## 数据源与接口
 
