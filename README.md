@@ -143,6 +143,7 @@ pwsh -File tests\run-tests.ps1      # 12 项自检：JSON 映射 / 时间解析 
 ## 相关文档
 
 - [跨平台移植可行性研究：Ubuntu arm64 / RK3588](docs/porting-ubuntu-arm64.md)
+- [板端实施方案：Orange Pi 5 只读查看器](docs/plan-orange-pi5-viewer.md)
 - [PLAN.md](PLAN.md)：初版方案与需求确认记录
 
 ## 许可

@@ -28,3 +28,7 @@ download.devtools
 *.suo
 Thumbs.db
 Desktop.ini
+
+# ---- 板端运维文档（含板子 IP/远程桌面配置，只留在本地）----
+/BOARD-STATE.md
+/AGENTS.md
