@@ -102,6 +102,7 @@ pwsh -File build.ps1 -SingleFile        # 另外再出一个单文件版（依�
 
 - 抓取 642 条 / 59 页 / **3.2 秒**；RSS ≈ 261 MB；空闲 CPU ≈ 1.7%（8 核）
 - 渲染走 **EGL + Mali GLES**（`libEGL.so.1` + `libmali.so`，无 llvmpipe）
+- 筛选：航班号 / 进出港 / 起降机场 / 状态 / **机型 / 航司** / 日期；双击行看详情
 - 无导出、无托盘、不常驻：打开即抓，关闭即退出（`src/ZhccCargoBoard.Desktop`）
 
 ```powershell

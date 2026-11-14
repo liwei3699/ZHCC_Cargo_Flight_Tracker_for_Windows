@@ -109,6 +109,13 @@
           <ComboBox Classes="filter" Width="96" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding Status, Mode=TwoWay}" />
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
+          <TextBlock Text="机型" Classes="label" />
+          <ComboBox Classes="filter" Width="96" ItemsSource="{Binding CraftTypeOptions}" SelectedItem="{Binding CraftType, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
+          <TextBlock Text="航司" Classes="label" />
+          <ComboBox Classes="filter" Width="86" ItemsSource="{Binding AirlineOptions}" SelectedItem="{Binding Airline, Mode=TwoWay}" />
+        </StackPanel>        <StackPanel Orientation="Horizontal" Margin="0,0,14,6">
           <TextBlock Text="日期" Classes="label" />
           <ComboBox Classes="filter" Width="96" ItemsSource="{Binding DateOptions}" SelectedItem="{Binding DateFilter, Mode=TwoWay}" />
         </StackPanel>

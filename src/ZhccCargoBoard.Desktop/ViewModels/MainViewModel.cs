@@ -24,6 +24,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _origin = All;
     private string _dest = All;
     private string _status = All;
+    private string _craftType = All;
+    private string _airline = All;
     private string _dateFilter = "全部日期";
 
     private bool _isBusy;
@@ -65,6 +67,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<string> OriginOptions { get; } = new() { All };
     public ObservableCollection<string> DestOptions { get; } = new() { All };
     public ObservableCollection<string> StatusOptions { get; } = new() { All };
+    public ObservableCollection<string> CraftTypeOptions { get; } = new() { All };
+    public ObservableCollection<string> AirlineOptions { get; } = new() { All };
     public ObservableCollection<string> DateOptions { get; } = new() { "全部日期", "今天", "明天", "后天" };
 
     // ---------------- 筛选条件 ----------------
@@ -96,6 +100,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _status;
         set => SetFilter(ref _status, value);
+    }
+
+    public string CraftType
+    {
+        get => _craftType;
+        set => SetFilter(ref _craftType, value);
+    }
+
+    public string Airline
+    {
+        get => _airline;
+        set => SetFilter(ref _airline, value);
     }
 
     public string DateFilter
@@ -221,16 +237,22 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var origin = Origin;
         var dest = Dest;
         var status = Status;
+        var craftType = CraftType;
+        var airline = Airline;
 
         Fill(OriginOptions, _all.Select(r => r.OriginCn));
         Fill(DestOptions, _all.Select(r => r.DestCn));
         Fill(StatusOptions, _all.Select(r => r.StatusText));
+        Fill(CraftTypeOptions, _all.Select(r => r.CraftType));
+        Fill(AirlineOptions, _all.Select(r => r.AirlineCode));
 
         // 列表被 Clear 时 ComboBox 的选中项会被清空，这里无条件重写回 VM 并通知，
         // 否则会出现"下拉框空白但筛选值其实是全部"的假象。
         Restore(ref _origin, OriginOptions, origin, nameof(Origin));
         Restore(ref _dest, DestOptions, dest, nameof(Dest));
         Restore(ref _status, StatusOptions, status, nameof(Status));
+        Restore(ref _craftType, CraftTypeOptions, craftType, nameof(CraftType));
+        Restore(ref _airline, AirlineOptions, airline, nameof(Airline));
 
         static void Fill(ObservableCollection<string> target, IEnumerable<string> values)
         {
@@ -289,6 +311,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (!IsAll(Origin) && !string.Equals(r.OriginCn, Origin, StringComparison.Ordinal)) return false;
         if (!IsAll(Dest) && !string.Equals(r.DestCn, Dest, StringComparison.Ordinal)) return false;
         if (!IsAll(Status) && !string.Equals(r.StatusText, Status, StringComparison.Ordinal)) return false;
+        if (!IsAll(CraftType) && !string.Equals(r.CraftType, CraftType, StringComparison.OrdinalIgnoreCase)) return false;
+        if (!IsAll(Airline) && !string.Equals(r.AirlineCode, Airline, StringComparison.OrdinalIgnoreCase)) return false;
 
         if (DateFilter is "今天" or "明天" or "后天")
         {
@@ -307,12 +331,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _origin = All;
         _dest = All;
         _status = All;
+        _craftType = All;
+        _airline = All;
         _dateFilter = "全部日期";
         OnPropertyChanged(nameof(FlightNo));
         OnPropertyChanged(nameof(Direction));
         OnPropertyChanged(nameof(Origin));
         OnPropertyChanged(nameof(Dest));
         OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(CraftType));
+        OnPropertyChanged(nameof(Airline));
         OnPropertyChanged(nameof(DateFilter));
         View.Refresh();
         OnPropertyChanged(nameof(VisibleCount));
